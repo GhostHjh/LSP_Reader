@@ -55,6 +55,9 @@ public:
 
 	//临时
 	void tmp();
+
+	//将字符串中的单引号加一个单引号
+	string ate_bug(string bug);
 	
 
 private:

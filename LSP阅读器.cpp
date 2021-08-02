@@ -27,8 +27,9 @@ int main(int arge, char* argv[])
 	SQL_main->LSP_SQLite_db_TABLE_video_NEW();
 	SQL_main->LSP_SQLite_db_TABLE_game_NEW();
 	SQL_main->LSP_SQLite_db_TABLE_set_NEW();
+	SQL_main->LSP_SQLite_db_TABLE_asmr_NEW();
 
-	//SQL_main->tmp();
+	//cout << SQL_main->ate_bug("cc'ccccc");
 
 
 	getchar();
