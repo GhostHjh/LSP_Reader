@@ -1,0 +1,11 @@
+#文件夹
+.vs
+.vscode
+Debug
+
+#文件
+LSP.db
+LSP阅读器基础测试代码.sln
+LSP阅读器基础测试代码.vcxproj
+LSP阅读器基础测试代码.vcxproj.*
+.gitignore

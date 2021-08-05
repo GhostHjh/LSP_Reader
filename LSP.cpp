@@ -85,68 +85,6 @@ string LSP_SQLite::time_level()
 	return to_string(local_time->tm_year + 1900) + "_" + to_string(local_time->tm_mon + 1) + "_" + to_string(local_time->tm_mday) + "_" + to_string(local_time->tm_hour) + "_" + to_string(local_time->tm_min) + "_" + to_string(local_time->tm_sec);
 }
 
-//数据库是否完成初始化查询语句		成功: 0		失败: -1
-int LSP_SQLite::LSP_SQLite_db_status()
-{
-	//SQL语句执行放回值
-	int int_sql;
-
-	//连接数据库
-	if ((int_sql = sqlite3_open_v2(LSP_SQLite_db, &LSP_SQL_SQLite, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, NULL)) == SQLITE_OK)
-	{
-		cout << "数据库\t\t连接成功" << endl;
-
-		//判断数据库是否已经完成初始化一(保险)
-		if ((int_sql = sqlite3_prepare_v2(LSP_SQL_SQLite, G2U("SELECT * FROM 数据库状态"), -1, &LSP_SQL_Stmt, NULL)) == SQLITE_OK)
-		{
-			cout << "数据库\t\t查询语句成功" << endl;
-
-			//获取结果
-			sqlite3_step(LSP_SQL_Stmt);
-			LSP_SQLite_NEW_status = U2G((char*)sqlite3_column_text(LSP_SQL_Stmt, 0));
-
-			//判断该数据库是否初始化结果是否为yes
-			if ("yes" == LSP_SQLite_NEW_status)
-			{
-				cout << "数据库\t\t已经完成初始化" << endl << endl;
-
-				//清除上一条SQL语句执行结果,  关闭SQLite句柄
-				sqlite3_finalize(LSP_SQL_Stmt);
-				sqlite3_close(LSP_SQL_SQLite);
-				return 0;
-			}
-			//为初始化返回 0
-			else
-			{
-				cout << "数据库\t\t未完成初始化" << endl << endl;
-
-				LSP_SQLite_NEW_status = "no";
-				//清除上一条SQL语句执行结果,  关闭SQLite句柄
-				sqlite3_finalize(LSP_SQL_Stmt);
-				sqlite3_close(LSP_SQL_SQLite);
-				return -1;
-			}		
-		}
-		//数据库查询失败返回 0
-		else
-		{
-			cout << "数据库\t\t查询语句失败" << endl;
-
-			//清除上一条SQL语句执行结果,  关闭SQLite句柄
-			sqlite3_close(LSP_SQL_SQLite);
-			return -1;
-		}
-	}		
-	else
-	{
-		cout << "数据库\t\t连接失败" << endl;
-
-		return -1;
-	}
-
-}
-
-
 //数据库初始化语句
 int LSP_SQLite::LSP_SQLite_db_NEW()
 {
@@ -211,13 +149,114 @@ int LSP_SQLite::LSP_SQLite_db_NEW()
 	}
 }
 
+//数据库是否完成初始化查询语句		成功: 0		失败: -1
+int LSP_SQLite::LSP_SQLite_db_status()
+{
+	//SQL语句执行放回值
+	int int_sql;
+
+	//连接数据库
+	if ((int_sql = sqlite3_open_v2(LSP_SQLite_db, &LSP_SQL_SQLite, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, NULL)) == SQLITE_OK)
+	{
+		cout << "数据库\t\t连接成功" << endl;
+
+		//判断数据库是否已经完成初始化一(保险)
+		if ((int_sql = sqlite3_prepare_v2(LSP_SQL_SQLite, G2U("SELECT \"是否初始化\" FROM \"数据库状态\""), -1, &LSP_SQL_Stmt, NULL)) == SQLITE_OK)
+		{
+			cout << "数据库\t\t查询语句成功" << endl;
+
+			//获取结果
+			sqlite3_step(LSP_SQL_Stmt);
+			LSP_SQLite_NEW_status = U2G((char*)sqlite3_column_text(LSP_SQL_Stmt, 0));
+
+			//判断该数据库是否初始化结果是否为yes
+			if ("yes" == LSP_SQLite_NEW_status)
+			{
+				cout << "数据库\t\t已经完成初始化" << endl << endl;
+
+				//清除上一条SQL语句执行结果,  关闭SQLite句柄
+				sqlite3_finalize(LSP_SQL_Stmt);
+				sqlite3_close(LSP_SQL_SQLite);
+				return 0;
+			}
+			//为初始化返回 0
+			else
+			{
+				cout << "数据库\t\t未完成初始化" << endl << endl;
+
+				LSP_SQLite_NEW_status = "no";
+				//清除上一条SQL语句执行结果,  关闭SQLite句柄
+				sqlite3_finalize(LSP_SQL_Stmt);
+				sqlite3_close(LSP_SQL_SQLite);
+				return -1;
+			}		
+		}
+		//数据库查询失败返回 0
+		else
+		{
+			cout << "数据库\t\t查询语句失败" << endl;
+
+			//清除上一条SQL语句执行结果,  关闭SQLite句柄
+			sqlite3_close(LSP_SQL_SQLite);
+			return -1;
+		}
+	}		
+	else
+	{
+		cout << "数据库\t\t连接失败" << endl;
+
+		return -1;
+	}
+
+}
+
 //临时使用
 void LSP_SQLite::tmp()
 {
-	for (int i = 0; i < LSP_SQLite_db_vector_book.size(); i++)
+	//连接数据库
+	if (!(sqlite3_open_v2(LSP_SQLite_db, &LSP_SQL_SQLite, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, NULL) == SQLITE_OK))
+		cout << "数据库连接成功!" << endl;
+
+	//临时存储 表 和 数据 名称
+	string TABLE_name = "视频";
+	string TABLE_vector = "小鹿酱";
+
+	//数据库查重用临时stmt
+	sqlite3_stmt* tmp_stmt;
+
+	//用于执行的SQL语句
+	string* SQL = new string;
+
+	//用于储存sqlite_exec()错误信息
+	char* no_log = new char[1024];
+
+	//拼接查询SQL语句并转为 char* 类型
+	string* tmp_SQL_string = new string{ "SELECT \"作品名称\" FROM \"" + TABLE_name + "\" WHERE \"作品名称\" = \'" + TABLE_vector + "\';" };
+
+	cout << *tmp_SQL_string << endl;
+	cout << "准备开始数据查重" << endl;
+	if (sqlite3_prepare_v2(LSP_SQL_SQLite, G2U(tmp_SQL_string->c_str()), -1, &tmp_stmt, NULL) == SQLITE_OK)
 	{
-		cout << "文件夹名称为:\t" << LSP_SQLite_db_vector_book[i].name << endl;
+		cout << "开始数据查重运行中" << endl;
+		sqlite3_step(tmp_stmt);
+		if (string(U2G((char*)sqlite3_column_text(tmp_stmt, 0))) == TABLE_vector)
+			cout << "数据重复,跳过此数据\n被跳过作品名称:\t" << TABLE_vector << endl;
 	}
+	else
+	{
+		cout << "数据查重运行失败" << endl;
+	}
+
+	//关闭数据库连接
+	sqlite3_close(LSP_SQL_SQLite);
+
+	//清空临时sqlite_stmt
+	//if (tmp_stmt != nullptr)
+		sqlite3_finalize(tmp_stmt);
+
+	//清空临时SQL查询语句tmp_sql_char
+	if (tmp_SQL_string != nullptr)
+		delete(tmp_SQL_string);
 }
 
 //获取指定目录下的所有 文件夹/文件 到一个vector中
@@ -305,6 +344,9 @@ int LSP_SQLite::LSP_SQLite_db_vecot_goto_TABLE(vector<_finddata_t>& TABLE_vector
 	if (!(sqlite3_open_v2(LSP_SQLite_db, &LSP_SQL_SQLite, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_SHAREDCACHE, NULL) == SQLITE_OK))
 		return -1;
 
+	//数据库查重用临时stmt
+	sqlite3_stmt* tmp_stmt;
+	
 	//用于执行的SQL语句
 	string* SQL = new string;
 
@@ -323,230 +365,344 @@ int LSP_SQLite::LSP_SQLite_db_vecot_goto_TABLE(vector<_finddata_t>& TABLE_vector
 	{
 		for (int i = 0; i < TABLE_vector.size(); i++)
 		{
-			//临时封面文件名称
-			string* tmp_name = new string;
+			//数据查重-----------------------------------------------------------------------------------------BUG
+			string* tmp_SQL_string = new string{ "SELECT \"作品名称\" FROM \"" + TABLE_name + "\" WHERE \"作品名称\" = \'" + TABLE_vector[i].name + "\';" };
+			//cout << *tmp_SQL_string << endl; 
+			if (sqlite3_prepare_v2(LSP_SQL_SQLite, G2U(tmp_SQL_string->c_str()), -1, &tmp_stmt, NULL) == SQLITE_OK)
+			{
+				cout << "开始数据查" << endl;
+				sqlite3_step(tmp_stmt);
+				if (string(U2G((char*)sqlite3_column_text(tmp_stmt, 0))) == TABLE_vector[i].name)
+					cout << "数据重复,跳过此数据\n被跳过作品名称:\t" << TABLE_vector[i].name << endl << endl << endl;
+			//数据查重-----------------------------------------------------------------------------------------BUG
+				else
+				{
+					//临时封面文件名称
+					string* tmp_name = new string;
 
-			//设置临时地址为指定地址
-			tmp_path = LSP_path[0] + "/" + TABLE_vector[i].name;
+					//设置临时地址为指定地址
+					tmp_path = LSP_path[0] + "/" + TABLE_vector[i].name;
 
-			if (get_files_Folder_goto_vector(tmp_path, tmp_folder) == 0)
-				*tmp_name = tmp_folder[0].name;
+					if (get_files_Folder_goto_vector(tmp_path, tmp_folder) == 0)
+						*tmp_name = tmp_folder[0].name;
+					else
+					{
+						cout << "!!!!!!!!!!!!!!!进入文件夹错误,检测文件夹名称是否存在特殊字符!!!!!!!!!!!!!!!" << endl;
+						*tmp_name = "进入文件夹失败!";
+
+					}
+					*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 页数, 汉化组, 作品封面, 是否显示, 状态 )" + " VALUES ( \'" + TABLE_vector[i].name + "\', " + to_string(tmp_folder.size()) + ", \'" + LSP_Chinese_localization(TABLE_vector[i].name) + "\', \'" + tmp_path + "/" + *tmp_name + "\', \'yes\', \'正常\' );";
+
+					//显示运行的SQL语句
+					cout << *SQL << endl << endl;
+
+					//运行sql语句
+					if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
+					{
+						cout << endl << "SQL语句运行失败" << endl;
+						cout << U2G(no_log) << endl;
+
+						cout << "尝试解决名称中的单引号" << endl;
+						*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 页数, 汉化组, 是否显示, 状态 )" + " VALUES ( \'" + ate_bug(TABLE_vector[i].name) + "\', " + to_string(tmp_folder.size()) + ", \'" + LSP_Chinese_localization(TABLE_vector[i].name) + "\', \'" + tmp_path + "/" + ate_bug(*tmp_name) + "\', \'yes\', \'正常\' );";
+						cout << *SQL << endl;
+
+						if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
+							cout << "依旧运行失败,请查看日志" << endl << endl;
+						else
+							cout << "使用双引号运行SQL语句成功" << endl << endl;
+					}
+
+					//清空临时用于存储文件夹的vector容器
+					if (tmp_folder.size() != 0)
+						vector<_finddata_t>().swap(tmp_folder);
+
+					//清空临时封面文件名称
+					if (tmp_name->size() != 0)
+						delete(tmp_name);
+				}
+			}
 			else
 			{
-				cout << "!!!!!!!!!!!!!!!进入文件夹错误,检测文件夹名称是否存在特殊字符!!!!!!!!!!!!!!!" << endl;
-				*tmp_name = "进入文件夹失败!";
-
-			}
-			*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 页数, 汉化组, 作品封面, 是否显示, 状态 )" + " VALUES ( \'" + TABLE_vector[i].name + "\', " + to_string(tmp_folder.size()) + ", \'" + LSP_Chinese_localization(TABLE_vector[i].name) + "\', \'" + tmp_path + "/" + *tmp_name + "\', \'yes\', \'正常\' );";
-
-			//显示运行的SQL语句
-			cout << *SQL << endl << endl;
-
-			//运行sql语句
-			if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
-			{
-				cout << endl << "SQL语句运行失败" << endl;
-				cout << U2G(no_log) << endl;
-
-				cout << "尝试解决名称中的单引号" << endl;
-				*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 页数, 汉化组, 是否显示, 状态 )" + " VALUES ( \'" + ate_bug(TABLE_vector[i].name) + "\', " + to_string(tmp_folder.size()) + ", \'" + LSP_Chinese_localization(TABLE_vector[i].name) + "\', \'" + tmp_path + "/" + ate_bug(*tmp_name) + "\', \'yes\', \'正常\' );";
-				cout << *SQL << endl;
-
-				if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
-					cout << "依旧运行失败,请查看日志" << endl << endl;
-				else
-					cout << "使用双引号运行SQL语句成功" << endl << endl;
+				cout << "数据查重失败!" << endl;
 			}
 
-			//清空临时用于存储文件夹的vector容器
-			if (tmp_folder.size() != 0)
-				vector<_finddata_t>().swap(tmp_folder);
+			//清空临时sqlite_stmt
+			if (tmp_stmt != nullptr)
+				sqlite3_finalize(tmp_stmt);
 
-			//清空临时封面文件名称
-			if (tmp_name->size() != 0)
-				delete(tmp_name);
+			//清空临时SQL查询语句tmp_sql_string
+			if (tmp_SQL_string != nullptr)
+				delete(tmp_SQL_string);
 		}
 	}	
 	else if ("合集" == TABLE_name)
 	{
 		for (int i = 0; i < LSP_SQLite_db_vector_set.size(); i++)
 		{
-			//设置临时地址为合集根目录+当前文件夹
-			tmp_path = LSP_path[1] + "/" + LSP_SQLite_db_vector_set_sort[i] + "/" + TABLE_vector[i].name;
-
-			//就行子文件夹查询
-			if (get_files_Folder_goto_vector(tmp_path, tmp_folder) != 0)
+			//数据查重-----------------------------------------------------------------------------------------BUG
+			string* tmp_SQL_string = new string{ "SELECT \"作品名称\" FROM \"" + TABLE_name + "\" WHERE \"作品名称\" = \'" + TABLE_vector[i].name + "\';" };
+			//cout << *tmp_SQL_string << endl; 
+			if (sqlite3_prepare_v2(LSP_SQL_SQLite, G2U(tmp_SQL_string->c_str()), -1, &tmp_stmt, NULL) == SQLITE_OK)
 			{
-				cout << "运行子文件夹数量查询失败!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
-					<< "子文件夹名称:\t" << tmp_path << endl;
-			}
-
-			*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 数量, 分类, 是否显示, 状态 )" + " VALUES ( \'" + TABLE_vector[i].name + "\', " + to_string(tmp_folder.size()) + ", \'" + LSP_SQLite_db_vector_set_sort[i] + "合集\', \'yes\', \'正常\' );";
-
-			//输出运行的SQL语句
-			//cout << *SQL << endl << endl;
-
-			//运行sql语句
-			if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
-			{
-				cout << endl << "SQL语句运行失败" << endl;
-				cout << U2G(no_log) << endl;
-
-				cout << "尝试解决名称中的单引号" << endl;
-				*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 数量, 分类, 是否显示, 状态 )" + " VALUES ( \"" + TABLE_vector[i].name + "\", " + to_string(tmp_folder.size()) + ", \'" + LSP_SQLite_db_vector_set_sort[i] + "合集\', \'yes\', \'正常\' );";
-				cout << *SQL << endl;
-
-				if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
-					cout << "依旧运行失败,请查看日志" << endl << endl;
+				cout << "开始数据查" << endl;
+				sqlite3_step(tmp_stmt);
+				if (string(U2G((char*)sqlite3_column_text(tmp_stmt, 0))) == TABLE_vector[i].name)
+					cout << "数据重复,跳过此数据\n被跳过合集名称:\t" << TABLE_vector[i].name << endl << endl << endl;
+				//数据查重-----------------------------------------------------------------------------------------BUG
 				else
-					cout << "使用双引号运行SQL语句成功" << endl << endl;
-			}
-			else
-				cout << "作品:\t" << TABLE_vector[i].name << "\t存入数据库成功\n\n";
+				{
+					//设置临时地址为合集根目录+当前文件夹
+					tmp_path = LSP_path[1] + "/" + LSP_SQLite_db_vector_set_sort[i] + "/" + TABLE_vector[i].name;
 
-			//清空临时用于存储文件夹的vector容器
-			if (tmp_folder.size() != 0)
-				vector<_finddata_t>().swap(tmp_folder);
+					//就行子文件夹查询
+					if (get_files_Folder_goto_vector(tmp_path, tmp_folder) != 0)
+					{
+						cout << "运行子文件夹数量查询失败!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+							<< "子文件夹名称:\t" << tmp_path << endl;
+					}
+
+					*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 数量, 分类, 是否显示, 状态 )" + " VALUES ( \'" + TABLE_vector[i].name + "\', " + to_string(tmp_folder.size()) + ", \'" + LSP_SQLite_db_vector_set_sort[i] + "合集\', \'yes\', \'正常\' );";
+
+					//输出运行的SQL语句
+					//cout << *SQL << endl << endl;
+
+					//运行sql语句
+					if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
+					{
+						cout << endl << "SQL语句运行失败" << endl;
+						cout << U2G(no_log) << endl;
+
+						cout << "尝试解决名称中的单引号" << endl;
+						*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 数量, 分类, 是否显示, 状态 )" + " VALUES ( \"" + TABLE_vector[i].name + "\", " + to_string(tmp_folder.size()) + ", \'" + LSP_SQLite_db_vector_set_sort[i] + "合集\', \'yes\', \'正常\' );";
+						cout << *SQL << endl;
+
+						if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
+							cout << "依旧运行失败,请查看日志" << endl << endl;
+						else
+							cout << "使用双引号运行SQL语句成功" << endl << endl;
+					}
+					else
+						cout << "作品:\t" << TABLE_vector[i].name << "\t存入数据库成功\n\n";
+
+					//清空临时用于存储文件夹的vector容器
+					if (tmp_folder.size() != 0)
+						vector<_finddata_t>().swap(tmp_folder);
+				}
+			}
+
+			//清空临时sqlite_stmt
+			if (tmp_stmt != nullptr)
+				sqlite3_finalize(tmp_stmt);
+
+			//清空临时SQL查询语句tmp_sql_string
+			if (tmp_SQL_string != nullptr)
+				delete(tmp_SQL_string);		
 		}
 	}
 	else if ("视频" == TABLE_name)
 	{
 		for (int i = 0; i < TABLE_vector.size(); i++)
 		{
-			//临时封面文件名称
-			string* tmp_name = new string;
-
-			//判断当前要存入数据库的是不是文件夹,如果是改分类为 xxx分类合集,否则改为 xxx分类视频.
-			if (Folder_or_File(TABLE_vector, i) == "文件夹")
+			//数据查重-----------------------------------------------------------------------------------------BUG
+			string* tmp_SQL_string = new string{ "SELECT \"作品名称\" FROM \"" + TABLE_name + "\" WHERE \"作品名称\" = \'" + TABLE_vector[i].name + "\';" };
+			//cout << *tmp_SQL_string << endl; 
+			if (sqlite3_prepare_v2(LSP_SQL_SQLite, G2U(tmp_SQL_string->c_str()), -1, &tmp_stmt, NULL) == SQLITE_OK)
 			{
-				//设置临时地址为合集根目录
-				tmp_path = LSP_path[2] + "/" + LSP_SQLite_db_vector_video_sort[i] + "/" + TABLE_vector[i].name;
-
-				//就行子文件夹查询
-				if (get_files_Folder_goto_vector(tmp_path, tmp_folder) != 0)
+				cout << "开始数据查" << endl;
+				sqlite3_step(tmp_stmt);
+				if (string(U2G((char*)sqlite3_column_text(tmp_stmt, 0))) == TABLE_vector[i].name)
+					cout << "数据重复,跳过此数据\n被跳过合集名称:\t" << TABLE_vector[i].name << endl << endl << endl;
+				//数据查重-----------------------------------------------------------------------------------------BUG
+				else
 				{
-					cout << "运行子文件夹数量查询失败!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
-						<< "子文件夹名称:\t" << tmp_path << endl;
+					//临时封面文件名称
+					string* tmp_name = new string;
+
+					//判断当前要存入数据库的是不是文件夹,如果是改分类为 xxx分类合集,否则改为 xxx分类视频.
+					if (Folder_or_File(TABLE_vector, i) == "文件夹")
+					{
+						//设置临时地址为合集根目录
+						tmp_path = LSP_path[2] + "/" + LSP_SQLite_db_vector_video_sort[i] + "/" + TABLE_vector[i].name;
+
+						//就行子文件夹查询
+						if (get_files_Folder_goto_vector(tmp_path, tmp_folder) != 0)
+						{
+							cout << "运行子文件夹数量查询失败!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+								<< "子文件夹名称:\t" << tmp_path << endl;
+						}
+
+						//设置封面文件名称
+						if (tmp_folder.size() != 0)
+							*tmp_name = tmp_folder[0].name;
+						else
+							*tmp_name = "文件夹为空";
+
+						//更改分类名称
+						LSP_SQLite_db_vector_video_sort[i] += "视频合集";
+					}
+					else if (Folder_or_File(TABLE_vector, i) == "文件")
+					{
+						LSP_SQLite_db_vector_video_sort[i] += "视频";
+
+						*tmp_name = TABLE_vector[i].name;//设置封面文件名称
+					}
+					else
+					{
+						LSP_SQLite_db_vector_video_sort[i] += "未知";
+						*tmp_name = "未知";//设置封面文件名称
+					}
+
+
+					*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 时长, 分类, 作品封面, 是否显示, 状态 )" + " VALUES ( \'" + TABLE_vector[i].name + "\', " + to_string(tmp_folder.size()) + ", \'" + string(LSP_SQLite_db_vector_video_sort[i]) + "\', \'" + tmp_path + "/" + *tmp_name + "\', \'yes\', \'正常\' );";
+
+					//显示运行的SQL语句
+					//cout << *SQL << endl << endl;
+
+					//运行sql语句
+					if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
+					{
+						cout << endl << "SQL语句运行失败" << endl;
+						cout << U2G(no_log) << endl;
+
+						cout << "尝试解决名称中的单引号" << endl;
+						*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 时长, 分类, 作品封面, 是否显示, 状态 )" + " VALUES ( \"" + TABLE_vector[i].name + "\", " + to_string(tmp_folder.size()) + ", \'" + string(LSP_SQLite_db_vector_video_sort[i]) + "\', \"" + tmp_path + "/" + *tmp_name + "\", \'yes\', \'正常\' );";
+						cout << *SQL << endl;
+
+						if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
+							cout << "依旧运行失败,请查看日志" << endl << endl;
+						else
+							cout << "使用双引号运行SQL语句成功" << endl << endl;
+					}
+					else
+						cout << "作品:\t" << TABLE_vector[i].name << "\t成功存入数据库\n\n\n\n\n";
+
+					//清空临时用于存储文件夹的vector容器
+					if (tmp_folder.size() != 0)
+						vector<_finddata_t>().swap(tmp_folder);
+
+					//清空临时封面名称
+					if (tmp_name->size() != 0)
+						delete(tmp_name);
 				}
-
-				//设置封面文件名称
-				if (tmp_folder.size() != 0)
-					*tmp_name = tmp_folder[0].name;
-				else
-					*tmp_name = "文件夹为空";
-
-				//更改分类名称
-				LSP_SQLite_db_vector_video_sort[i] += "视频合集";
 			}
-			else if (Folder_or_File(TABLE_vector, i) == "文件")
-			{
-				LSP_SQLite_db_vector_video_sort[i] += "视频";
 
-				*tmp_name = TABLE_vector[i].name;//设置封面文件名称
-			}
-			else
-			{
-				LSP_SQLite_db_vector_video_sort[i] += "未知";
-				*tmp_name = "未知";//设置封面文件名称
-			}
-				
+			//清空临时sqlite_stmt
+			if (tmp_stmt != nullptr)
+				sqlite3_finalize(tmp_stmt);
 
-			*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 时长, 分类, 作品封面, 是否显示, 状态 )" + " VALUES ( \'" + TABLE_vector[i].name + "\', " + to_string(tmp_folder.size()) + ", \'" + string(LSP_SQLite_db_vector_video_sort[i]) + "\', \'" + tmp_path + "/" + *tmp_name + "\', \'yes\', \'正常\' );";
-
-			//显示运行的SQL语句
-			//cout << *SQL << endl << endl;
-
-			//运行sql语句
-			if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
-			{
-				cout << endl << "SQL语句运行失败" << endl;
-				cout << U2G(no_log) << endl;
-
-				cout << "尝试解决名称中的单引号" << endl;
-				*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 时长, 分类, 作品封面, 是否显示, 状态 )" + " VALUES ( \"" + TABLE_vector[i].name + "\", " + to_string(tmp_folder.size()) + ", \'" + string(LSP_SQLite_db_vector_video_sort[i]) + "\', \"" + tmp_path + "/" + *tmp_name + "\", \'yes\', \'正常\' );";
-				cout << *SQL << endl;
-
-				if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
-					cout << "依旧运行失败,请查看日志" << endl << endl;
-				else
-					cout << "使用双引号运行SQL语句成功" << endl << endl;
-			}
-			else
-				cout << "作品:\t" << TABLE_vector[i].name << "\t成功存入数据库\n\n\n\n\n";
-
-			//清空临时用于存储文件夹的vector容器
-			if (tmp_folder.size() != 0)
-				vector<_finddata_t>().swap(tmp_folder);
-
-			//清空临时封面名称
-			if (tmp_name->size() != 0)
-				delete(tmp_name);
+			//清空临时SQL查询语句tmp_sql_string
+			if (tmp_SQL_string != nullptr)
+				delete(tmp_SQL_string);
 		}
 	}	
 	else if ("游戏" == TABLE_name)
 	{
 		for (int i = 0; i < TABLE_vector.size(); i++)
 		{
-			//get_files_Folder_goto_vector(tmp_path, tmp_folder);
-			*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 大小, 作品封面, 是否显示, 状态 )" + " VALUES ( \'" + TABLE_vector[i].name + "\', " + to_string(TABLE_vector[i].size / MB) + ", \'" + LSP_path[3] + "/" + TABLE_vector[i].name + "\', \'yes\', \'正常\' );";
-
-			//显示运行的SQL语句
-			//cout << *SQL << endl << endl;
-
-			//运行sql语句
-			if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
+			//数据查重-----------------------------------------------------------------------------------------BUG
+			string* tmp_SQL_string = new string{ "SELECT \"作品名称\" FROM \"" + TABLE_name + "\" WHERE \"作品名称\" = \'" + TABLE_vector[i].name + "\';" };
+			//cout << *tmp_SQL_string << endl; 
+			if (sqlite3_prepare_v2(LSP_SQL_SQLite, G2U(tmp_SQL_string->c_str()), -1, &tmp_stmt, NULL) == SQLITE_OK)
 			{
-				cout << endl << "SQL语句运行失败" << endl;
-				cout << U2G(no_log) << endl;
-
-				cout << "尝试解决名称中的单引号" << endl;
-				*SQL = "INSERT INTO "+ TABLE_name + " ( 作品名称, 大小, 作品封面, 是否显示, 状态 )" + " VALUES ( \'" + ate_bug(TABLE_vector[i].name) + "\', " + to_string(TABLE_vector[i].size / MB) + ", \'" + LSP_path[3] + "/" + ate_bug(TABLE_vector[i].name) + "\', \'yes\', \'正常\' );";
-				cout << *SQL << endl;
-
-				if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
-					cout << "依旧运行失败,请查看日志" << endl << endl;
+				cout << "开始数据查" << endl;
+				sqlite3_step(tmp_stmt);
+				if (string(U2G((char*)sqlite3_column_text(tmp_stmt, 0))) == TABLE_vector[i].name)
+					cout << "数据重复,跳过此数据\n被跳过合集名称:\t" << TABLE_vector[i].name << endl << endl << endl;
+				//数据查重-----------------------------------------------------------------------------------------BUG
 				else
-					cout << "使用双引号运行SQL语句成功" << endl << endl;
+				{
+					//get_files_Folder_goto_vector(tmp_path, tmp_folder);
+					*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 大小, 作品封面, 是否显示, 状态 )" + " VALUES ( \'" + TABLE_vector[i].name + "\', " + to_string(TABLE_vector[i].size / MB) + ", \'" + LSP_path[3] + "/" + TABLE_vector[i].name + "\', \'yes\', \'正常\' );";
+
+					//显示运行的SQL语句
+					//cout << *SQL << endl << endl;
+
+					//运行sql语句
+					if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
+					{
+						cout << endl << "SQL语句运行失败" << endl;
+						cout << U2G(no_log) << endl;
+
+						cout << "尝试解决名称中的单引号" << endl;
+						*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 大小, 作品封面, 是否显示, 状态 )" + " VALUES ( \'" + ate_bug(TABLE_vector[i].name) + "\', " + to_string(TABLE_vector[i].size / MB) + ", \'" + LSP_path[3] + "/" + ate_bug(TABLE_vector[i].name) + "\', \'yes\', \'正常\' );";
+						cout << *SQL << endl;
+
+						if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
+							cout << "依旧运行失败,请查看日志" << endl << endl;
+						else
+							cout << "使用双引号运行SQL语句成功" << endl << endl;
+					}
+				}
 			}
+
+			//清空临时sqlite_stmt
+			if (tmp_stmt != nullptr)
+				sqlite3_finalize(tmp_stmt);
+
+			//清空临时SQL查询语句tmp_sql_string
+			if (tmp_SQL_string != nullptr)
+				delete(tmp_SQL_string);		
 		}
 	}
 	else if ("ASMR" == TABLE_name)
 	{
 		for (int i = 0; i < LSP_SQLite_db_vector_asmr.size(); i++)
 		{
-			//设置临时地址为合集根目录+当前文件夹
-			tmp_path = LSP_path[4] + "/" + TABLE_vector[i].name;
-
-			//进行子文件夹查询
-			if (get_files_Folder_goto_vector(tmp_path, tmp_folder) != 0)
+			//数据查重-----------------------------------------------------------------------------------------BUG
+			string* tmp_SQL_string = new string{ "SELECT \"作品名称\" FROM \"" + TABLE_name + "\" WHERE \"作品名称\" = \'" + TABLE_vector[i].name + "\';" };
+			//cout << *tmp_SQL_string << endl; 
+			if (sqlite3_prepare_v2(LSP_SQL_SQLite, G2U(tmp_SQL_string->c_str()), -1, &tmp_stmt, NULL) == SQLITE_OK)
 			{
-				cout << "运行子文件夹数量查询失败!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
-					<< "子文件夹名称:\t" << tmp_path << endl;
-			}
-
-			*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 时长, 是否显示, 状态 )" + " VALUES ( \'" + TABLE_vector[i].name + "\', " + to_string(tmp_folder.size()) + ", \'yes\', \'正常\' );";
-
-			//运行sql语句
-			if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
-			{
-				cout << endl << "SQL语句运行失败" << endl;
-				cout << U2G(no_log) << endl;
-
-				cout << "尝试解决名称中的单引号" << endl;
-				*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 时长, 是否显示, 状态 )" + " VALUES ( \"" + TABLE_vector[i].name + "\", " + to_string(tmp_folder.size()) + ", \'yes\', \'正常\' );";
-				cout << *SQL << endl;
-
-				if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
-					cout << "依旧运行失败,请查看日志" << endl << endl;
+				cout << "开始数据查" << endl;
+				sqlite3_step(tmp_stmt);
+				if (string(U2G((char*)sqlite3_column_text(tmp_stmt, 0))) == TABLE_vector[i].name)
+					cout << "数据重复,跳过此数据\n被跳过合集名称:\t" << TABLE_vector[i].name << endl << endl << endl;
+				//数据查重-----------------------------------------------------------------------------------------BUG
 				else
-					cout << "使用双引号运行SQL语句成功" << endl << endl;
-			}
-			else
-				cout << "作品:\t" << TABLE_vector[i].name << "\t存入数据库成功\n\n";
+				{
+					//设置临时地址为合集根目录+当前文件夹
+					tmp_path = LSP_path[4] + "/" + TABLE_vector[i].name;
 
-			//清空临时用于存储文件夹的vector容器
-			if (tmp_folder.size() != 0)
-				vector<_finddata_t>().swap(tmp_folder);
+					//进行子文件夹查询
+					if (get_files_Folder_goto_vector(tmp_path, tmp_folder) != 0)
+					{
+						cout << "运行子文件夹数量查询失败!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+							<< "子文件夹名称:\t" << tmp_path << endl;
+					}
+
+					*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 时长, 是否显示, 状态 )" + " VALUES ( \'" + TABLE_vector[i].name + "\', " + to_string(tmp_folder.size()) + ", \'yes\', \'正常\' );";
+
+					//运行sql语句
+					if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
+					{
+						cout << endl << "SQL语句运行失败" << endl;
+						cout << U2G(no_log) << endl;
+
+						cout << "尝试解决名称中的单引号" << endl;
+						*SQL = "INSERT INTO " + TABLE_name + " ( 作品名称, 时长, 是否显示, 状态 )" + " VALUES ( \"" + TABLE_vector[i].name + "\", " + to_string(tmp_folder.size()) + ", \'yes\', \'正常\' );";
+						cout << *SQL << endl;
+
+						if (sqlite3_exec(LSP_SQL_SQLite, G2U(SQL->c_str()), NULL, NULL, &no_log) != SQLITE_OK)
+							cout << "依旧运行失败,请查看日志" << endl << endl;
+						else
+							cout << "使用双引号运行SQL语句成功" << endl << endl;
+					}
+					else
+						cout << "作品:\t" << TABLE_vector[i].name << "\t存入数据库成功\n\n";
+
+					//清空临时用于存储文件夹的vector容器
+					if (tmp_folder.size() != 0)
+						vector<_finddata_t>().swap(tmp_folder);
+				}
+			}
+
+			//清空临时sqlite_stmt
+			if (tmp_stmt != nullptr)
+				sqlite3_finalize(tmp_stmt);
+
+			//清空临时SQL查询语句tmp_sql_string
+			if (tmp_SQL_string != nullptr)
+				delete(tmp_SQL_string);		
 		}
 	
 	}
@@ -554,31 +710,36 @@ int LSP_SQLite::LSP_SQLite_db_vecot_goto_TABLE(vector<_finddata_t>& TABLE_vector
 		return -1;			
 
 	//释放内存
-	delete[](no_log);//释放用于储存sqlite_exec()错误信息
-
+	if (no_log != nullptr)
+	{
+		delete[](no_log);//释放用于储存sqlite_exec()错误信息
+		no_log = nullptr;
+	}
+		
+	
 	if (tmp_folder.size() != 0)
 		vector<_finddata_t>().swap(tmp_folder);//清空临时用于存储文件夹的vector容器
 
+	if (SQL->size() != 0)
+		delete(SQL);//释放临时存储的SQL命令
+
 	//检测内存释放情况
-	if (tmp_folder.size() == 0 && no_log == nullptr)
-		return 0;
+	if (tmp_folder.size() == 0 && no_log == nullptr && SQL->size() == 0)
+		cout << "临时文件vector 和 sqlite_exec() 释放完毕\n\n";	
 	else
 	{
 		if (tmp_folder.size() != 0)
-		{
-			cout << "储存临时文件夹vector容器释放失败!!!!!!!!!!!!!" << endl;
-		}
-		else if (no_log != nullptr)
-		{
-			cout << "用于存储SQLite_exec()运行的SQL语句错误信息释放失败!!!!!!!!" << endl;
-		}
+			cout << "储存临时文件夹vector容器释放失败!!!!!!!!!!!!!\n\n";
 
-		return -1;
+		if (no_log != nullptr)
+			cout << "用于存储SQLite_exec()运行的SQL语句错误信息释放失败!!!!!!!!\n\n";
+
+		if (SQL->size() != 0)
+			cout << "释放临时存储的SQL命令的string指针释放失败!!!!!!!!!!!!!!!\n\n";
 	}
 
 	//断开数据库连接
 	sqlite3_close(LSP_SQL_SQLite);
-	delete(SQL);
 	return 0;
 }
 
@@ -799,7 +960,6 @@ int LSP_SQLite::LSP_SQLite_db_TABLE_set_NEW()
 	else
 	{
 		cout << "获取合集目录下文件夹出错" << endl;
-
 		return -1;
 	}
 
@@ -812,8 +972,7 @@ int LSP_SQLite::LSP_SQLite_db_TABLE_set_NEW()
 	}
 	else
 	{
-		cout << "合集类vector存入SQLite数据库失败" << endl;
-
+		cout << "合集类vector存入SQLite数据库出现问题!" << endl;
 		return -1;
 	}
 }

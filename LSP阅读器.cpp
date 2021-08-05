@@ -23,6 +23,8 @@ int main(int arge, char* argv[])
 	
 	cout << "\n\n当前时间:\t" << SQL_main->time_level() << endl << endl;
 
+	//SQL_main->tmp();
+
 	SQL_main->LSP_SQLtie_db_TABLE_book_NEW();
 	SQL_main->LSP_SQLite_db_TABLE_video_NEW();
 	SQL_main->LSP_SQLite_db_TABLE_game_NEW();
