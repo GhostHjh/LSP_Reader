@@ -11,7 +11,6 @@
 ## 依赖项
 
 > ## sqlite依赖项:
->
 > > shell.c--------->Sqlite数据库shell实现代码
 > > sqlite3.c------->Sqlite数据库接口代码
 > > sqlite3.h------->sqlite数据库接口头文件(使用中)
